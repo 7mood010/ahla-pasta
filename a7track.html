@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Track Order | AHLA PASTA</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      max-width: 400px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    label, input {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+    }
+    input {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #388e3c;
+    }
+    .order-result {
+      max-width: 600px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📦 Track Your Order</h1>
+
+  <form id="track-form">
+    <label for="phone">Enter your phone number</label>
+    <input type="tel" id="phone" required>
+    <button type="submit">🔍 Track</button>
+  </form>
+
+  <div id="result" class="order-result" style="display:none;"></div>
+
+  <script type="module">
+    import { app, db } from './js/firebase-config.js';
+    import { ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const form = document.getElementById("track-form");
+    const resultBox = document.getElementById("result");
+
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const phone = document.getElementById("phone").value.trim();
+      resultBox.style.display = "none";
+      resultBox.innerHTML = "";
+
+      const snapshot = await get(ref(db, "orders"));
+      if (!snapshot.exists()) {
+        resultBox.innerHTML = `<p>No orders found.</p>`;
+        resultBox.style.display = "block";
+        return;
+      }
+
+      const orders = snapshot.val();
+      const matching = Object.values(orders).filter(order => order.phone === phone);
+
+      if (matching.length === 0) {
+        resultBox.innerHTML = `<p>No orders found for this phone number.</p>`;
+      } else {
+        matching.forEach(order => {
+          resultBox.innerHTML += `
+            <h3>Order #${order.orderNumber}</h3>
+            <p><strong>Status:</strong> ${order.status}</p>
+            <p><strong>Pickup Time:</strong> ${order.pickupTime}</p>
+            <p><strong>Items:</strong></p>
+            <ul>
+              ${order.items.map(i => `<li>${i.name} (${i.size}) - AED ${i.price}</li>`).join('')}
+            </ul>
+            <p><strong>Total:</strong> AED ${order.total}</p>
+            <hr/>
+          `;
+        });
+      }
+
+      resultBox.style.display = "block";
+    });
+  </script>
+
+</body>
+</html>

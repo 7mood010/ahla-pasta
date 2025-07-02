@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Checkout | AHLA PASTA</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #fffdf9;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin: 15px 0 5px;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background: #ff5722;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #e64a19;
+    }
+    .summary {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Checkout 🧾</h1>
+
+  <div class="summary">
+    <h3 id="final-total">Total: AED 0</h3>
+  </div>
+
+  <form id="checkout-form">
+    <label for="name">Name</label>
+    <input type="text" id="name" required>
+
+    <label for="phone">Phone Number</label>
+    <input type="tel" id="phone" required>
+
+    <label for="email">Email</label>
+    <input type="email" id="email" required>
+
+    <label for="pickup-time">Pickup Time</label>
+    <input type="time" id="pickup-time" required>
+
+    <button type="submit">✅ Place Order (Cash Only)</button>
+  </form>
+
+  <script type="module">
+    import { app, db } from './js/firebase-config.js';
+    import { ref, push, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // Get total + cart
+    const total = localStorage.getItem("total") || 0;
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    document.getElementById("final-total").textContent = `Total: AED ${total}`;
+
+    const form = document.getElementById("checkout-form");
+
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const pickupTime = document.getElementById("pickup-time").value;
+
+      // Get current number of orders to set order number
+      const ordersRef = ref(db, 'orders');
+      const snapshot = await get(ordersRef);
+      const orderCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+      const orderNumber = orderCount + 1;
+
+      const newOrder = {
+        orderNumber,
+        name,
+        phone,
+        email,
+        pickupTime,
+        items: cart,
+        total: Number(total),
+        status: "Preparing"
+      };
+
+      // Push order
+      push(ordersRef, newOrder);
+
+      // Save phone for tracking
+      localStorage.setItem("lastPhone", phone);
+
+      // Redirect to tracking
+      window.location.href = "a7track.html";
+    });
+  </script>
+
+</body>
+</html>

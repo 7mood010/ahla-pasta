@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel | AHLA PASTA</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f4f4;
+      padding: 30px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .login, .admin {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #2196f3;
+      color: white;
+      padding: 10px;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1976d2;
+    }
+    .order {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <h1>🔐 Admin Panel</h1>
+
+  <div class="login" id="login-box">
+    <input type="text" id="username" placeholder="Username" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="login-button">Login</button>
+    <p id="login-error" style="color:red;"></p>
+  </div>
+
+  <div class="admin hidden" id="admin-box">
+    <h2>All Orders</h2>
+    <div id="orders"></div>
+  </div>
+
+  <script type="module">
+    import { app, db } from './js/firebase-config.js';
+    import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const loginBox = document.getElementById("login-box");
+    const adminBox = document.getElementById("admin-box");
+    const loginError = document.getElementById("login-error");
+    const ordersDiv = document.getElementById("orders");
+
+    const ADMIN_USER = "ahlamaster";
+    const ADMIN_PASS = "supersecure786";
+
+    document.getElementById("login-button").addEventListener("click", () => {
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      if (username === ADMIN_USER && password === ADMIN_PASS) {
+        loginBox.classList.add("hidden");
+        adminBox.classList.remove("hidden");
+        loadOrders();
+      } else {
+        loginError.innerText = "❌ Wrong username or password.";
+      }
+    });
+
+    async function loadOrders() {
+      const snapshot = await get(ref(db, "orders"));
+      if (!snapshot.exists()) {
+        ordersDiv.innerHTML = "<p>No orders found.</p>";
+        return;
+      }
+
+      const orders = snapshot.val();
+      ordersDiv.innerHTML = "";
+
+      Object.entries(orders).forEach(([key, order]) => {
+        const div = document.createElement("div");
+        div.className = "order";
+
+        div.innerHTML = `
+          <h3>Order #${order.orderNumber}</h3>
+          <p><strong>Name:</strong> ${order.name}</p>
+          <p><strong>Phone:</strong> ${order.phone}</p>
+          <p><strong>Email:</strong> ${order.email}</p>
+          <p><strong>Pickup Time:</strong> ${order.pickupTime}</p>
+          <p><strong>Status:</strong> ${order.status}</p>
+          <p><strong>Total:</strong> AED ${order.total}</p>
+          <ul>
+            ${order.items.map(i => `<li>${i.name} (${i.size}) - AED ${i.price}</li>`).join('')}
+          </ul>
+          <label>Update Status:</label>
+          <select id="status-${key}">
+            <option value="Preparing" ${order.status === "Preparing" ? "selected" : ""}>Preparing</option>
+            <option value="Ready" ${order.status === "Ready" ? "selected" : ""}>Ready</option>
+            <option value="Delivered" ${order.status === "Delivered" ? "selected" : ""}>Delivered</option>
+          </select>
+          <label>Note:</label>
+          <textarea id="note-${key}">${order.note || ""}</textarea>
+          <button onclick="saveOrder('${key}')">💾 Save</button>
+        `;
+
+        ordersDiv.appendChild(div);
+      });
+    }
+
+    window.saveOrder = async function(key) {
+      const status = document.getElementById(`status-${key}`).value;
+      const note = document.getElementById(`note-${key}`).value;
+      const orderRef = ref(db, "orders/" + key);
+      await update(orderRef, { status, note });
+      alert("✅ Order updated!");
+    };
+  </script>
+</body>
+</html>
